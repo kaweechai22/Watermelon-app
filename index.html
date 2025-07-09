@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระดับการสุกของแตงโม</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="theme-color" content="#ffffff">
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      text-align: center;
+      padding: 2rem;
+      background-color: #f0f8ff;
+      color: #333;
+    }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .result {
+      margin-top: 2rem;
+      font-size: 1.4rem;
+      background-color: #ffffff;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: inline-block;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit&display=swap" rel="stylesheet">
+</head>
+<body>
+  <h1>🍉 ระดับการสุกของแตงโม</h1>
+  <p>กดปุ่มแล้วเคาะแตงโมใกล้ไมโครโฟน</p>
+  <button onclick="startRecording()">🎤 เริ่มวัดเสียง</button>
+  <div class="result" id="result"></div>
+
+  <script>
+    let audioContext;
+    let analyser;
+    let dataArray;
+    let bufferLength;
+
+    function predictBrixLinear(frequency) {
+      return 9.92 - 0.0056 * frequency;
+    }
+
+    function predictBrixPower(frequency) {
+      return 26.70 * Math.pow(frequency, -0.22);
+    }
+
+    function getDominantFrequency() {
+      analyser.getByteFrequencyData(dataArray);
+      let maxIndex = 0;
+      for (let i = 1; i < bufferLength; i++) {
+        if (dataArray[i] > dataArray[maxIndex]) {
+          maxIndex = i;
+        }
+      }
+      const nyquist = audioContext.sampleRate / 2;
+      return maxIndex * nyquist / bufferLength;
+    }
+
+    async function startRecording() {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+
+      source.connect(analyser);
+
+      setTimeout(() => {
+        const frequency = getDominantFrequency();
+        const brixLinear = predictBrixLinear(frequency);
+        const brixPower = predictBrixPower(frequency);
+
+        document.getElementById("result").innerHTML =
+          `🔁 ความถี่: <b>${frequency.toFixed(2)} Hz</b><br>
+           🍉 ความหวาน (เชิงเส้น): <b>${brixLinear.toFixed(2)} °Brix</b><br>
+           🍉 ความหวาน (กำลัง): <b>${brixPower.toFixed(2)} °Brix</b>`;
+
+        stream.getTracks().forEach(track => track.stop());
+      }, 2500);
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service worker registered.', reg))
+          .catch(err => console.error('Service worker registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
