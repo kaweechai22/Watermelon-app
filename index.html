@@ -90,7 +90,7 @@
         document.getElementById("result").innerHTML =
           `🔁 ความถี่: <b>${frequency.toFixed(2)} Hz</b><br>
            🍉 ความหวาน1 : <b>${brixLinear.toFixed(2)} °Brix</b><br>
-           🍉 ความหวาน2 : <b>${brixPower.toFixed(2)} °Brix</b>`;
+           
 
         stream.getTracks().forEach(track => track.stop());
       }, 2500);
